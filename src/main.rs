@@ -22,7 +22,8 @@ fn main() {
     None => {
         info!("Failed to synchronize with all NTP servers");
         return;
-    }
+      }
+    };
 
     loop {
         let cpu_usage = metrics::cpu::get_cpu_usage(&mut sys);
