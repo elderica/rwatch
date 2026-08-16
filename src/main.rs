@@ -1,35 +1,17 @@
-use std::path::Path;
-
 use env_logger::Env;
-use log::error;
 use log::info;
-use log::warn;
-use sysinfo::{Disks, MINIMUM_CPU_UPDATE_INTERVAL, System};
+use sysinfo::{Disks, System};
+
+mod metrics;
 fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let mut sys = System::new_all();
     let mut disks = Disks::new_with_refreshed_list();
-    sys.refresh_cpu_usage();
+
     loop {
-        std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
-        sys.refresh_cpu_usage();
-        sys.refresh_memory();
-        disks.refresh(true);
-
-        let cpu_usage = sys.global_cpu_usage();
-        let total_memory = sys.total_memory() as f64;
-        let available_memory = sys.available_memory() as f64;
-        let available_memory_percentage = (available_memory / total_memory) * 100.0;
-
-        let mut disk_usage = 0.0;
-
-        for disk in disks.list() {
-            if disk.mount_point() == Path::new("/") {
-                let total = disk.total_space() as f64;
-                let available = disk.available_space() as f64;
-                disk_usage = (total - available) / total * 100.0;
-            }
-        }
+        let cpu_usage = metrics::cpu::get_cpu_usage(&mut sys);
+        let available_memory_percentage = metrics::memory::get_memory_usage(&mut sys);
+        let disk_usage = metrics::disk::get_disk_usage(&mut disks);
 
         info!(
             "CPU: {:.2}%, Memory available: {:.2}%, Disk: {:.2}%",
