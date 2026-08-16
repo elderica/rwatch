@@ -5,15 +5,14 @@ use sysinfo::{Disks, System};
 mod metrics;
 
 fn main() {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info"))
+    .format_timestamp(None)
+    .init();
     let mut sys = System::new_all();
     let mut disks = Disks::new_with_refreshed_list();
 
     let ntp_time = match  metrics::time::NtpClock::new() {
-        Some(ntp_time) => {
-            info!("NTP time synchronized: {}", ntp_time.now());
-            ntp_time
-        }
+        Some(ntp_time) => ntp_time,
         None => {
         info!("Failed to get NTP time");
         return;
