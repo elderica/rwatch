@@ -3,20 +3,36 @@ use log::info;
 use sysinfo::{Disks, System};
 
 mod metrics;
+
 fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let mut sys = System::new_all();
     let mut disks = Disks::new_with_refreshed_list();
 
+    let ntp_time = match  metrics::time::NtpClock::new() {
+        Some(ntp_time) => {
+            info!("NTP time synchronized: {}", ntp_time.now());
+            ntp_time
+        }
+        None => {
+        info!("Failed to get NTP time");
+        return;
+    }
+};
+
+    
     loop {
         let cpu_usage = metrics::cpu::get_cpu_usage(&mut sys);
         let available_memory_percentage = metrics::memory::get_memory_usage(&mut sys);
         let disk_usage = metrics::disk::get_disk_usage(&mut disks);
 
         info!(
-            "CPU: {:.2}%, Memory available: {:.2}%, Disk: {:.2}%",
-            cpu_usage, available_memory_percentage, disk_usage
-        );
+        "[{}] CPU: {:.2}%, Memory available: {:.2}%, Disk: {:.2}%",
+        ntp_time.now().format("%Y-%m-%d %H:%M:%S%.3f"),
+        cpu_usage,
+        available_memory_percentage,
+        disk_usage
+    );
         std::thread::sleep(std::time::Duration::from_secs(5));
     }
 }
