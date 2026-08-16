@@ -1,8 +1,7 @@
 use chrono::{DateTime, Duration, Local, TimeZone};
 use rsntp::SntpClient;
 use std::time::Instant;
-
-const NTP_SERVER: &str = "132.163.97.4:123";
+use log::warn;
 
 pub struct NtpClock {
     start_time: DateTime<Local>,
@@ -10,26 +9,30 @@ pub struct NtpClock {
 }
 
 impl NtpClock {
-    pub fn new() -> Option<Self> {
+    pub fn new(ntp_servers:&[&str]) -> Option<Self> {
         let client = SntpClient::new();
 
-        match client.synchronize(NTP_SERVER) {
-            Ok(response) => {
+        for server in ntp_servers{
+            match client.synchronize(server){
+                Ok(response)=>{
                 let duration = response.datetime().unix_timestamp().ok()?;
 
                 let start_time = Local
                     .timestamp_opt(duration.as_secs() as i64, duration.subsec_nanos())
                     .single()?;
 
-                Some(Self {
+                return Some(Self {
                     start_time,
                     start_instant: Instant::now(),
-                })
+                });        
             }
-            Err(_) => None,
+            Err(error) => {
+            warn!("Failed to synchronize with NTP server {}: {}", server, error);
+            }
         }
-    }
-
+    warn!("Failed to synchronize with all NTP servers");
+     None
+}
     pub fn now(&self) -> DateTime<Local> {
         let elapsed = self.start_instant.elapsed();
 
@@ -37,4 +40,4 @@ impl NtpClock {
             + Duration::from_std(elapsed)
                 .expect("elapsed duration should be valid")
     }
-}
+  }

@@ -11,15 +11,19 @@ fn main() {
     let mut sys = System::new_all();
     let mut disks = Disks::new_with_refreshed_list();
 
-    let ntp_time = match  metrics::time::NtpClock::new() {
-        Some(ntp_time) => ntp_time,
-        None => {
-        info!("Failed to get NTP time");
+    let ntp_servers = [
+    "ntp.nict.jp:123",
+    "time.nist.gov:123",
+    "pool.ntp.org:123",
+    ];
+
+    let ntp_time = match metrics::time::NtpClock::new(&ntp_servers) {
+    Some(ntp_time) => ntp_time,
+    None => {
+        info!("Failed to synchronize with all NTP servers");
         return;
     }
-};
 
-    
     loop {
         let cpu_usage = metrics::cpu::get_cpu_usage(&mut sys);
         let available_memory_percentage = metrics::memory::get_memory_usage(&mut sys);
