@@ -8,18 +8,18 @@ use log::warn;
 fn main() {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let mut sys = System::new_all();
+    let mut disks = Disks::new_with_refreshed_list();
     sys.refresh_cpu_usage();
     loop{
     std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
     sys.refresh_cpu_usage();
     sys.refresh_memory();
+    disks.refresh(true);
 
     let cpu_usage = sys.global_cpu_usage();
     let total_memory = sys.total_memory() as f64;
     let available_memory = sys.available_memory() as f64;
     let available_memory_percentage = (available_memory / total_memory) * 100.0;
-
-    let disks = Disks::new_with_refreshed_list();
 
     let mut disk_usage =  0.0;
 
