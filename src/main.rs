@@ -1,9 +1,10 @@
 use std::path::Path;
 
+use env_logger::Env;
 use sysinfo::{Disks, MINIMUM_CPU_UPDATE_INTERVAL, System};
 use log::info;
 fn main() {
-    env_logger::init(); 
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let mut sys = System::new_all();
     sys.refresh_cpu_usage();
     std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
