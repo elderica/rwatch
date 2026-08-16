@@ -32,8 +32,9 @@ impl NtpClock {
         }
     warn!("Failed to synchronize with all NTP servers");
      None
-}
-    pub fn now(&self) -> DateTime<Local> {
+  }
+
+pub fn now(&self) -> DateTime<Local> {
         let elapsed = self.start_instant.elapsed();
 
         self.start_time
@@ -41,3 +42,4 @@ impl NtpClock {
                 .expect("elapsed duration should be valid")
     }
   }
+}
