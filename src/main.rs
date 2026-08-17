@@ -11,9 +11,9 @@ fn main() {
     let mut sys = System::new_all();
     let mut disks = Disks::new_with_refreshed_list();
 
-    const ntp_servers: [&str;2] = ["169.254.169.254:123", "ntp.nict.jp:123"];
+    const NTP_SERVERS: [&str;2] = ["169.254.169.254:123", "ntp.nict.jp:123"];
 
-    let ntp_time = match metrics::time::NtpClock::new(&ntp_servers) {
+    let ntp_time = match metrics::time::NtpClock::new(&NTP_SERVERS) {
         Some(ntp_time) => ntp_time,
         None => {
             info!("Failed to synchronize with all NTP servers");
