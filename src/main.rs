@@ -11,7 +11,7 @@ fn main() {
     let mut sys = System::new_all();
     let mut disks = Disks::new_with_refreshed_list();
 
-    let ntp_servers = ["ntp.nict.jp:123", "time.nist.gov:123", "pool.ntp.org:123"];
+    let ntp_servers = ["169.254.169.254:123", "ntp.nict.jp:123"];
 
     let ntp_time = match metrics::time::NtpClock::new(&ntp_servers) {
         Some(ntp_time) => ntp_time,
