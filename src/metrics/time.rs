@@ -21,10 +21,7 @@ impl NtpClock {
                     .timestamp_opt(duration.as_secs() as i64, duration.subsec_nanos())
                     .single()?;
 
-                Some(Self {
-                    start_time,
-                    start_instant: Instant::now(),
-                })
+                Some(Self { start_time, start_instant: Instant::now() })
             }
             Err(_) => None,
         }
@@ -33,8 +30,6 @@ impl NtpClock {
     pub fn now(&self) -> DateTime<Local> {
         let elapsed = self.start_instant.elapsed();
 
-        self.start_time
-            + Duration::from_std(elapsed)
-                .expect("elapsed duration should be valid")
+        self.start_time + Duration::from_std(elapsed).expect("elapsed duration should be valid")
     }
 }
