@@ -6,6 +6,7 @@ mod metrics;
 
 fn main() {
     logging::init_logger();
+
     let mut server_logger = match logging::ServerLogger::new("server.jsonl") {
         Ok(logger) => logger,
         Err(error) => {
@@ -18,6 +19,7 @@ fn main() {
 
     let mut sys = System::new_all();
     let mut disks = Disks::new_with_refreshed_list();
+
     let ntp_time = match metrics::time::NtpClock::new(&NTP_SERVERS) {
         Some(ntp_time) => ntp_time,
         None => {
@@ -26,12 +28,18 @@ fn main() {
         }
     };
 
+    let args: Vec<String> = std::env::args().collect();
+    let once = args.iter().any(|arg| arg == "--once");
+
     loop {
         let cpu_usage = metrics::cpu::get_cpu_usage(&mut sys);
         let available_memory_percentage = metrics::memory::get_memory_usage(&mut sys);
         let disk_usage = metrics::disk::get_disk_usage(&mut disks);
 
-        let timestamp = ntp_time.now().format("%Y-%m-%d %H:%M:%S%.3f").to_string();
+        let timestamp = ntp_time
+            .now()
+            .format("%Y-%m-%d %H:%M:%S%.3f")
+            .to_string();
 
         info!(
             "[{}] CPU: {:.2}%, Memory available: {:.2}%, Disk: {:.2}%",
@@ -45,6 +53,10 @@ fn main() {
 
         if let Err(error) = server_logger.append(&record) {
             error!("Failed to append to server log: {error}");
+        }
+
+        if once {
+            break;
         }
 
         std::thread::sleep(std::time::Duration::from_secs(5));
