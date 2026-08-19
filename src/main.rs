@@ -6,8 +6,6 @@ mod metrics;
 
 fn main() {
     logging::init_logger();
-    let run_once = std::env::args().skip(1).any(|argument| argument == "--once");
-
     let mut server_logger = match logging::ServerLogger::new("server.jsonl") {
         Ok(logger) => logger,
         Err(error) => {
@@ -16,16 +14,20 @@ fn main() {
         }
     };
 
+    const NTP_SERVERS: [&str; 2] = ["169.254.169.254:123", "ntp.nict.jp:123"];
+
     let mut sys = System::new_all();
     let mut disks = Disks::new_with_refreshed_list();
-
-    let ntp_time = match metrics::time::NtpClock::new() {
+    let ntp_time = match metrics::time::NtpClock::new(&NTP_SERVERS) {
         Some(ntp_time) => ntp_time,
         None => {
             error!("Failed to get NTP time");
             return;
         }
     };
+
+    let args: Vec<String> = std::env::args().collect();
+    let once = args.iter().any(|arg| arg == "--once");
 
     loop {
         let cpu_usage = metrics::cpu::get_cpu_usage(&mut sys);
@@ -48,7 +50,7 @@ fn main() {
             error!("Failed to append to server log: {error}");
         }
 
-        if run_once {
+        if once {
             break;
         }
 
