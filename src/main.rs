@@ -33,10 +33,7 @@ fn main() {
     let shutdown = signal::setup_signal_handlers();
 
     loop {
-        if ! shutdown.running.load(std::sync::atomic::Ordering::Relaxed) {
-            break;
-        }
-
+      
 
         let cpu_usage: f64 = metrics::cpu::get_cpu_usage(&mut sys);
         let available_memory_percentage = metrics::memory::get_memory_usage(&mut sys);
@@ -76,7 +73,9 @@ fn main() {
             .unwrap();
 
         if *shutdown_requested {
+            info!("Graceful shutdown completed");
             break;
         }
+        
     }
 }
