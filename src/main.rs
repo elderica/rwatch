@@ -17,7 +17,7 @@ fn main() {
 
     const NTP_SERVERS: [&str; 2] = ["169.254.169.254:123", "ntp.nict.jp:123"];
 
-    let mut sys = System::new_all();
+    let mut sys = System::new();
     let mut disks = Disks::new_with_refreshed_list();
     let ntp_time = match metrics::time::NtpClock::new(&NTP_SERVERS) {
         Some(ntp_time) => ntp_time,
