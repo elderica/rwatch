@@ -1,0 +1,6 @@
+[project]
+name = "rwatch-scripts"
+version = "0.1.0"
+description = "rwatch 付属スクリプト(watchdog 等)の実行環境。依存は未使用だが uv 管理の venv を用意しておく"
+requires-python = ">=3.12"
+dependencies = []
