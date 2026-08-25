@@ -28,7 +28,7 @@ cargo build --release
 
 ## watchdog の実行方法(uv venv ラッパー)
 
-cron(no_agent)からは `bin/watchdog.py` 経由で実行する:
+cron(no_agent)からは `scripts/watchdog.py` 経由で実行する:
 
 ```bash
 VIRTUAL_ENV=<repo>/.venv uv run python scripts/watchdog.py   # 直接実行する場合
@@ -36,5 +36,5 @@ VIRTUAL_ENV=<repo>/.venv uv run python scripts/watchdog.py   # 直接実行す�
 
 - `pyproject.toml` は依存ゼロ(標準ライブラリのみ)だが、uv 管理 venv を用意してある
 - 依存を追加するときは `pyproject.toml` に追記して `uv sync`(ラッパー側の変更は不要)
-- `~/.hermes/profiles/<profile>/scripts/watchdog.py` → `bin/watchdog.py` の
+- `~/.hermes/profiles/<profile>/scripts/watchdog.py` → `scripts/watchdog.py` の
   シンボリックリンク経由でも動く(ラッパーが realpath 自己解決するため)
