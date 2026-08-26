@@ -1,3 +1,4 @@
+use clap::Parser;
 use log::{error, info};
 use sysinfo::{Disks, System};
 
@@ -6,6 +7,8 @@ mod logging;
 mod metrics;
 mod notify;
 mod signal;
+
+const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), " (", env!("RWATCH_COMMIT"), ")");
 
 /// 閾値異常の検出頻度を抑えるため、状態が「回復」した直後の 1 回だけ
 /// 報告する(エッジトリガ)。常時超過時にログが流れ続けるのを防ぐ。
@@ -22,14 +25,27 @@ fn report_violations_if_recovered_or_first(violations: &[String], was_reported: 
     }
 }
 
+#[derive(Parser)]
+#[command(
+    name = "rwatch",
+    version = VERSION,
+)]
+struct Cli {
+    /// Run once and exit
+    #[arg(long)]
+    once: bool,
+}
+
 fn main() {
+    let cli = Cli::parse();
+
     logging::init_logger();
 
     let mut server_logger = match logging::ServerLogger::new("server.jsonl") {
         Ok(logger) => logger,
         Err(error) => {
-            error!("Failed to create server logger: {error}");
-            return;
+            error!("Failed to initialize server logger: {error}");
+            std::process::exit(1);
         }
     };
 
@@ -39,15 +55,12 @@ fn main() {
     let mut disks = Disks::new_with_refreshed_list();
 
     let ntp_time = match metrics::time::NtpClock::new(&NTP_SERVERS) {
-        Some(ntp_time) => ntp_time,
+        Some(clock) => clock,
         None => {
-            error!("Failed to get NTP time");
-            return;
+            error!("Failed to initialize NTP client");
+            std::process::exit(1);
         }
     };
-
-    let args: Vec<String> = std::env::args().collect();
-    let once = args.iter().any(|arg| arg == "--once");
 
     let shutdown = signal::setup_signal_handlers();
 
@@ -62,6 +75,7 @@ fn main() {
         let disk_usage = metrics::disk::get_disk_usage(&mut disks);
         // メモリ使用率(total - available ベース。watchdog.py と同じ定義)
         let mem_used_percentage = 100.0 - available_memory_percentage;
+
         let timestamp = ntp_time.now().format("%Y-%m-%d %H:%M:%S%.3f").to_string();
 
         info!(
@@ -70,7 +84,9 @@ fn main() {
         );
 
         let record = format!(
-            "{{\"timestamp\": \"{}\", \"cpu_usage\": {:.2}, \"available_memory_percentage\": {:.2}, \"disk_usage\": {:.2}}}",
+            "{{\"timestamp\": \"{}\", \"cpu_usage\": {:.2}, \
+            \"available_memory_percentage\": {:.2}, \
+            \"disk_usage\": {:.2}}}",
             timestamp, cpu_usage, available_memory_percentage, disk_usage,
         );
 
@@ -93,7 +109,7 @@ fn main() {
             report_violations_if_recovered_or_first(&violations, &mut violations_reported);
         }
 
-        if once {
+        if cli.once {
             break;
         }
 
