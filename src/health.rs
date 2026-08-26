@@ -4,21 +4,19 @@
 //! 計測は rwatch 本体(metrics モジュール)が行い、このモジュールは
 //! 「値と閾値の比較」と「異常メッセージの生成」だけを担当する。
 
-/// 閾値(超過で異常)。watchdog.py の THRESHOLDS と同じ値。
+/// 閾値(超過で異常)。watchdog.py の THRESHOLDS から disk/mem のみ採用。
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Thresholds {
     /// ディスク使用率 %
     pub disk_used_pct: f64,
     /// メモリ使用率 %
     pub mem_used_pct: f64,
-    /// ロードアベレージ(1分)
-    pub load1: f64,
 }
 
 /// watchdog.py の既定値と同一。
 impl Default for Thresholds {
     fn default() -> Self {
-        Self { disk_used_pct: 85.0, mem_used_pct: 90.0, load1: 4.0 }
+        Self { disk_used_pct: 85.0, mem_used_pct: 90.0 }
     }
 }
 
@@ -39,8 +37,6 @@ pub struct Sample {
     pub disk_used_pct: f64,
     /// メモリ使用率 %(basis の定義に従う)
     pub mem_used_pct: f64,
-    /// ロードアベレージ(1分)
-    pub load1: f64,
     /// メモリ計算の基準(記録用)
     pub memory_basis: MemoryBasis,
 }
@@ -65,12 +61,6 @@ impl Thresholds {
                 sample.mem_used_pct, self.mem_used_pct
             ));
         }
-        if sample.load1 > self.load1 {
-            findings.push(format!(
-                "load average {:.2} exceeds threshold {:.2}",
-                sample.load1, self.load1
-            ));
-        }
 
         findings
     }
@@ -85,7 +75,6 @@ mod tests {
         let thresholds = Thresholds::default();
         assert_eq!(thresholds.disk_used_pct, 85.0);
         assert_eq!(thresholds.mem_used_pct, 90.0);
-        assert_eq!(thresholds.load1, 4.0);
     }
 
     #[test]
@@ -93,7 +82,6 @@ mod tests {
         let sample = Sample {
             disk_used_pct: 42.0,
             mem_used_pct: 13.0,
-            load1: 0.5,
             memory_basis: MemoryBasis::UsedFromAvailable,
         };
         assert!(Thresholds::default().violations(&sample).is_empty());
@@ -104,7 +92,6 @@ mod tests {
         let sample = Sample {
             disk_used_pct: 86.0,
             mem_used_pct: 13.0,
-            load1: 0.5,
             memory_basis: MemoryBasis::UsedFromAvailable,
         };
         let violations = Thresholds::default().violations(&sample);
@@ -117,11 +104,10 @@ mod tests {
         let sample = Sample {
             disk_used_pct: 99.0,
             mem_used_pct: 95.0,
-            load1: 7.5,
             memory_basis: MemoryBasis::UsedFromAvailable,
         };
         let violations = Thresholds::default().violations(&sample);
-        assert_eq!(violations.len(), 3);
+        assert_eq!(violations.len(), 2);
     }
 
     /// 境界値ちょうどは「超過」ではない(> で判定、watchdog.py 同様)。
@@ -130,7 +116,6 @@ mod tests {
         let sample = Sample {
             disk_used_pct: 85.0,
             mem_used_pct: 90.0,
-            load1: 4.0,
             memory_basis: MemoryBasis::UsedFromAvailable,
         };
         assert!(Thresholds::default().violations(&sample).is_empty());

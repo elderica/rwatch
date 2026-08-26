@@ -53,7 +53,7 @@ fn main() {
 
     // 閾値監視の設定。旧 watchdog.py と同じ既定値。
     const THRESHOLDS: health::Thresholds =
-        health::Thresholds { disk_used_pct: 85.0, mem_used_pct: 90.0, load1: 4.0 };
+        health::Thresholds { disk_used_pct: 85.0, mem_used_pct: 90.0 };
     let mut violations_reported = false;
 
     loop {
@@ -62,18 +62,16 @@ fn main() {
         let disk_usage = metrics::disk::get_disk_usage(&mut disks);
         // メモリ使用率(total - available ベース。watchdog.py と同じ定義)
         let mem_used_percentage = 100.0 - available_memory_percentage;
-        let (load1, _load5, _load15) = metrics::load::get_load_average().unwrap_or((0.0, 0.0, 0.0));
-
         let timestamp = ntp_time.now().format("%Y-%m-%d %H:%M:%S%.3f").to_string();
 
         info!(
-            "[{}] CPU: {:.2}%, Memory available: {:.2}%, Disk: {:.2}%, Load1: {:.2}",
-            timestamp, cpu_usage, available_memory_percentage, disk_usage, load1
+            "[{}] CPU: {:.2}%, Memory available: {:.2}%, Disk: {:.2}%",
+            timestamp, cpu_usage, available_memory_percentage, disk_usage
         );
 
         let record = format!(
-            "{{\"timestamp\": \"{}\", \"cpu_usage\": {:.2}, \"available_memory_percentage\": {:.2}, \"disk_usage\": {:.2}, \"load1\": {:.2}}}",
-            timestamp, cpu_usage, available_memory_percentage, disk_usage, load1,
+            "{{\"timestamp\": \"{}\", \"cpu_usage\": {:.2}, \"available_memory_percentage\": {:.2}, \"disk_usage\": {:.2}}}",
+            timestamp, cpu_usage, available_memory_percentage, disk_usage,
         );
 
         if let Err(error) = server_logger.append(&record) {
@@ -89,7 +87,6 @@ fn main() {
             let sample = health::Sample {
                 disk_used_pct: disk_usage,
                 mem_used_pct: mem_used_percentage,
-                load1,
                 memory_basis: health::MemoryBasis::UsedFromAvailable,
             };
             let violations = THRESHOLDS.violations(&sample);
