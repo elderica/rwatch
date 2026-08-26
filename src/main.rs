@@ -77,23 +77,24 @@ fn main() {
         );
 
         if let Err(error) = server_logger.append(&record) {
+            // JSONL 書き込み失敗時は ping を送らない。
+            // systemd watchdog が書けない状態ごと検知できるようにするため。
             error!("Failed to append to server log: {error}");
-        }
+        } else {
+            // 書き込み成功の証として ping を送る(NOTIFY_SOCKET 未設定なら何もしない)
+            if let Err(error) = notify::watchdog_ping() {
+                error!("Failed to send watchdog ping: {error}");
+            }
 
-        // 生存報告はループが回っていることの目安。ログ書き込みの成否とは独立に送る。
-        // (NOTIFY_SOCKET 未設定なら何もしない)
-        if let Err(error) = notify::watchdog_ping() {
-            error!("Failed to send watchdog ping: {error}");
+            let sample = health::Sample {
+                disk_used_pct: disk_usage,
+                mem_used_pct: mem_used_percentage,
+                load1,
+                memory_basis: health::MemoryBasis::UsedFromAvailable,
+            };
+            let violations = THRESHOLDS.violations(&sample);
+            report_violations_if_recovered_or_first(&violations, &mut violations_reported);
         }
-
-        let sample = health::Sample {
-            disk_used_pct: disk_usage,
-            mem_used_pct: mem_used_percentage,
-            load1,
-            memory_basis: health::MemoryBasis::UsedFromAvailable,
-        };
-        let violations = THRESHOLDS.violations(&sample);
-        report_violations_if_recovered_or_first(&violations, &mut violations_reported);
 
         if once {
             break;
