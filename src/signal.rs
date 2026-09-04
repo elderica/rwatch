@@ -1,9 +1,22 @@
 use signal_hook::consts::signal::*;
 use signal_hook::iterator::Signals;
 use std::sync::{Arc, Condvar, Mutex};
+use std::time::Duration;
 
 pub struct Shutdown {
-    pub condvar: Arc<(Mutex<bool>, Condvar)>,
+    condvar: Arc<(Mutex<bool>, Condvar)>,
+}
+
+impl Shutdown {
+    /// 最大 `duration` まで待機する。シグナル受信で即座に起床する。
+    /// 戻り値 true = 停止要求あり。
+    pub fn wait_timeout(&self, duration: Duration) -> bool {
+        let (lock, cvar) = &*self.condvar;
+        let requested = lock.lock().unwrap();
+        let (guard, _) =
+            cvar.wait_timeout_while(requested, duration, |requested| !*requested).unwrap();
+        *guard
+    }
 }
 
 pub fn setup_signal_handlers() -> Shutdown {
