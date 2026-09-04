@@ -53,6 +53,7 @@ fn main() {
     // loopback を除外した全 NIC の区間トラフィックを sysinfo で取得する。
     let mut networks = Networks::new_with_refreshed_list();
     networks.refresh(true);
+    let mut last_refresh = std::time::Instant::now();
 
     loop {
         let cpu_usage: f64 = metrics::cpu::get_cpu_usage(&mut sys);
@@ -61,13 +62,16 @@ fn main() {
 
         // sysinfo の received()/transmitted() は「前回 refresh からの差分バイト数」。
         // 計測窓の待機はシグナルで中断可能にする。中断時は窓が不完全なので記録せず終了する。
-        let start = std::time::Instant::now();
         if shutdown.wait_timeout(std::time::Duration::from_secs(INTERVAL_SECONDS)) {
             info!("Graceful shutdown completed");
             break;
         }
         networks.refresh(true);
-        let elapsed_seconds = start.elapsed().as_secs_f64();
+        // 差分の起点は前回の refresh なので、区間も refresh 間で測る。待機時間だけで割ると
+        // cpu/mem/disk の収集時間 (約 0.2 秒) が区間から漏れ、Mbps が約 4% 過大になる。
+        let refreshed_at = std::time::Instant::now();
+        let elapsed_seconds = refreshed_at.duration_since(last_refresh).as_secs_f64();
+        last_refresh = refreshed_at;
 
         let (delta_bytes, interface_count) = networks
             .iter()
