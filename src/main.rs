@@ -60,8 +60,12 @@ fn main() {
         let disk_usage = metrics::disk::get_disk_usage(&mut disks);
 
         // sysinfo の received()/transmitted() は「前回 refresh からの差分バイト数」。
+        // 計測窓の待機はシグナルで中断可能にする。中断時は窓が不完全なので記録せず終了する。
         let start = std::time::Instant::now();
-        std::thread::sleep(std::time::Duration::from_secs(INTERVAL_SECONDS));
+        if shutdown.wait_timeout(std::time::Duration::from_secs(INTERVAL_SECONDS)) {
+            info!("Graceful shutdown completed");
+            break;
+        }
         networks.refresh(true);
         let elapsed_seconds = start.elapsed().as_secs_f64();
 
@@ -95,24 +99,6 @@ fn main() {
         }
 
         if cli.once {
-            break;
-        }
-
-        let (lock, cvar) = &*shutdown.condvar;
-        let mut shutdown_requested = lock.lock().unwrap();
-
-        if !*shutdown_requested {
-            let remaining = INTERVAL_SECONDS.saturating_sub(start.elapsed().as_secs());
-            if remaining > 0 {
-                let (guard, _) = cvar
-                    .wait_timeout(shutdown_requested, std::time::Duration::from_secs(remaining))
-                    .unwrap();
-                shutdown_requested = guard;
-            }
-        }
-
-        if *shutdown_requested {
-            info!("Graceful shutdown completed");
             break;
         }
     }
